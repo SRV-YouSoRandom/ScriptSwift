@@ -16,9 +16,10 @@ import { GenerateScriptFormSchema, type GenerateScriptInput } from "@/lib/schema
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertTriangle } from "lucide-react";
+import type { GenerateColdCallScriptOutput } from "@/ai/flows/generate-cold-call-script";
 
 interface ScriptSwiftFormProps {
-  onScriptGenerated: (script: string) => void;
+  onScriptGenerated: (script: GenerateColdCallScriptOutput) => void;
   onGenerationStart: () => void;
   onGenerationEnd: () => void;
 }
@@ -70,8 +71,6 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
           title: "Script Generated!",
           description: "Your sales script is ready.",
         });
-        // Do not reset form here, user might want to tweak and regenerate
-        // form.reset(); 
       } else {
         setError(result.error || "Failed to generate script.");
         toast({
@@ -207,7 +206,7 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
                             <FormItem>
                                 <FormLabel>Customer Summary</FormLabel>
                                 <FormControl>
-                                <Textarea placeholder="Describe your target customer, their business, or their needs. Include company name if known." {...textField} disabled={customerInfoType !== "text"} />
+                                <Textarea placeholder="Describe your target customer, their business, or their needs. Include company name if known (e.g., Company Name: XYZ Corp)." {...textField} disabled={customerInfoType !== "text"} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

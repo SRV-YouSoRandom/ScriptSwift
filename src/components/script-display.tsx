@@ -4,28 +4,50 @@ import type { FC } from 'react';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { ClipboardCopy, Download, Edit3, Check } from "lucide-react";
+import { ClipboardCopy, Download } from "lucide-react";
+import type { GenerateColdCallScriptOutput } from "@/ai/flows/generate-cold-call-script";
 
 interface ScriptDisplayProps {
-  script: string;
+  script: GenerateColdCallScriptOutput;
   onClear?: () => void;
 }
 
+function formatScriptForDisplay(script: GenerateColdCallScriptOutput): string {
+  let formatted = `## Opening\n${script.opening}\n\n`;
+  formatted += `## Value Proposition\n${script.valueProposition}\n\n`;
+  formatted += `## Engagement Question\n${script.engagementQuestion}\n\n`;
+  formatted += `## Call to Action\n${script.callToAction}\n\n`;
+
+  if (script.adaptivePhrases) {
+    formatted += `## Adaptive Phrases\n`;
+    formatted += `### If Prospect is Positive:\n${script.adaptivePhrases.positiveCueResponse}\n\n`;
+    formatted += `### If Prospect is Neutral/Busy:\n${script.adaptivePhrases.neutralOrBusyResponse}\n\n`;
+  }
+
+  if (script.objectionHandlingTips && script.objectionHandlingTips.length > 0) {
+    formatted += `## Objection Handling Tips\n`;
+    script.objectionHandlingTips.forEach(tip => {
+      formatted += `### Objection: ${tip.objection}\nResponse: ${tip.response}\n\n`;
+    });
+  }
+  return formatted.trim();
+}
+
+
 export const ScriptDisplay: FC<ScriptDisplayProps> = ({ script, onClear }) => {
   const { toast } = useToast();
-  const [editedScript, setEditedScript] = useState(script);
-  const [isEditing, setIsEditing] = useState(false);
+  const [displayableScript, setDisplayableScript] = useState("");
 
   useEffect(() => {
-    setEditedScript(script);
-    setIsEditing(false); // Reset editing state when new script is passed
+    if (script) {
+      setDisplayableScript(formatScriptForDisplay(script));
+    }
   }, [script]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(editedScript)
+    navigator.clipboard.writeText(displayableScript)
       .then(() => {
         toast({
           title: "Copied to clipboard!",
@@ -43,7 +65,7 @@ export const ScriptDisplay: FC<ScriptDisplayProps> = ({ script, onClear }) => {
   };
 
   const handleDownload = () => {
-    const blob = new Blob([editedScript], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([displayableScript], { type: "text/plain;charset=utf-8" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = "sales_script.txt";
@@ -57,33 +79,26 @@ export const ScriptDisplay: FC<ScriptDisplayProps> = ({ script, onClear }) => {
     });
   };
   
-  const toggleEdit = () => {
-    setIsEditing(!isEditing);
-  }
-
   return (
     <Card className="w-full shadow-xl">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Generated Sales Script</CardTitle>
-        <Button variant="ghost" size="icon" onClick={toggleEdit} aria-label={isEditing ? "Save Script" : "Edit Script"}>
-          {isEditing ? <Check className="h-5 w-5" /> : <Edit3 className="h-5 w-5" />}
-        </Button>
+        {/* Edit button removed for simplicity with structured script */}
       </CardHeader>
       <CardContent>
-        {isEditing ? (
-          <Textarea
-            value={editedScript}
-            onChange={(e) => setEditedScript(e.target.value)}
-            className="min-h-[200px] md:min-h-[300px] text-base leading-relaxed"
-            aria-label="Editable sales script"
-          />
-        ) : (
-          <ScrollArea className="h-[200px] md:h-[300px] rounded-md border p-4">
-            <pre className="whitespace-pre-wrap text-sm md:text-base leading-relaxed font-sans">
-              {editedScript}
-            </pre>
-          </ScrollArea>
-        )}
+        <ScrollArea className="h-[300px] md:h-[400px] rounded-md border p-4 bg-secondary/30">
+          <pre className="whitespace-pre-wrap text-sm md:text-base leading-relaxed font-sans">
+            {displayableScript.split('\n').map((line, index) => {
+              if (line.startsWith('## ') && !line.startsWith('### ')) {
+                return <strong key={index} className="block mt-3 mb-1 text-lg text-primary">{line.substring(3)}</strong>;
+              }
+              if (line.startsWith('### ')) {
+                return <strong key={index} className="block mt-2 mb-0.5 text-md text-foreground/80">{line.substring(4)}</strong>;
+              }
+              return <span key={index} className="block">{line}</span>;
+            })}
+          </pre>
+        </ScrollArea>
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row justify-end gap-2">
         {onClear && (

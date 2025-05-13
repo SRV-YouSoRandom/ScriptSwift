@@ -5,9 +5,10 @@ import { Logo } from "@/components/icons/logo";
 import { ScriptSwiftForm } from "@/components/script-swift-form";
 import { ScriptDisplay } from "@/components/script-display";
 import { Separator } from "@/components/ui/separator";
+import type { GenerateColdCallScriptOutput } from "@/ai/flows/generate-cold-call-script";
 
 export default function ScriptSwiftPage() {
-  const [generatedScript, setGeneratedScript] = useState<string | null>(null);
+  const [generatedScript, setGeneratedScript] = useState<GenerateColdCallScriptOutput | null>(null);
   const [_isLoading, setIsLoading] = useState(false); // Renamed to avoid conflict if form has own loading
   const [currentYear, setCurrentYear] = useState<number | null>(null);
 
@@ -17,7 +18,7 @@ export default function ScriptSwiftPage() {
   }, []);
 
 
-  const handleScriptGenerated = (script: string) => {
+  const handleScriptGenerated = (script: GenerateColdCallScriptOutput) => {
     setGeneratedScript(script);
     setIsLoading(false);
   };
