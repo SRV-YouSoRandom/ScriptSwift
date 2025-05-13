@@ -11,7 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { handleGenerateScriptAction, GenerateScriptFormSchema, type GenerateScriptInput } from "@/lib/actions";
+import { handleGenerateScriptAction } from "@/lib/actions";
+import { GenerateScriptFormSchema, type GenerateScriptInput } from "@/lib/schemas"; // Updated import
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertTriangle } from "lucide-react";
@@ -51,14 +52,15 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
     onGenerationStart();
 
     // Ensure URL is empty if type is text, and text is empty if type is URL
-    const submissionValues = {
+    const submissionValues: GenerateScriptInput = {
       ...values,
       customerInfo: {
-        ...values.customerInfo,
+        type: values.customerInfo.type,
         url: values.customerInfo.type === 'url' ? values.customerInfo.url : undefined,
         text: values.customerInfo.type === 'text' ? values.customerInfo.text : undefined,
       }
     };
+    
 
     try {
       const result = await handleGenerateScriptAction(submissionValues);
@@ -71,6 +73,11 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
         form.reset(); // Optionally reset form
       } else {
         setError(result.error || "Failed to generate script.");
+        toast({ // Added toast for generation error
+          title: "Generation Failed",
+          description: result.error || "Could not generate script. Please check your inputs.",
+          variant: "destructive",
+        });
       }
     } catch (e) {
       const errMessage = e instanceof Error ? e.message : "An unexpected error occurred.";
@@ -146,7 +153,18 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
                 render={({ field }) => (
                     <Tabs
                         value={field.value}
-                        onValueChange={(value) => field.onChange(value as "url" | "text")}
+                        onValueChange={(value) => {
+                            field.onChange(value as "url" | "text");
+                            // Clear the other field when switching types
+                            if (value === "url") {
+                                form.setValue("customerInfo.text", "");
+                                form.clearErrors("customerInfo.text"); 
+                            } else {
+                                form.setValue("customerInfo.url", "");
+                                form.clearErrors("customerInfo.url");
+                            }
+                            form.clearErrors("customerInfo.type"); // Clear general customerInfo error
+                        }}
                         className="w-full"
                     >
                         <TabsList className="grid w-full grid-cols-2">
@@ -163,7 +181,7 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
                                 <FormControl>
                                 <Input placeholder="https://customer-website.com" {...urlField} disabled={customerInfoType !== "url"} />
                                 </FormControl>
-                                {customerInfoType === "url" && <FormMessage />}
+                                 <FormMessage />
                             </FormItem>
                             )}
                         />
@@ -178,7 +196,7 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
                                 <FormControl>
                                 <Textarea placeholder="Describe your target customer, their business, or their needs." {...textField} disabled={customerInfoType !== "text"} />
                                 </FormControl>
-                                {customerInfoType === "text" && <FormMessage />}
+                                <FormMessage />
                             </FormItem>
                             )}
                         />
@@ -186,8 +204,12 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
                     </Tabs>
                 )}
               />
-              {/* Display general error for customerInfo */}
-              {form.formState.errors.customerInfo?.message && (
+              {/* Display general error for customerInfo.type (from refine) */}
+              {form.formState.errors.customerInfo?.type?.message && (
+                 <p className="text-sm font-medium text-destructive">{form.formState.errors.customerInfo.type.message}</p>
+              )}
+               {/* Fallback for root customerInfo error if refine path doesn't catch it */}
+              {form.formState.errors.customerInfo?.message && !form.formState.errors.customerInfo?.type?.message && (
                  <p className="text-sm font-medium text-destructive">{form.formState.errors.customerInfo.message}</p>
               )}
             </section>
