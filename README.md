@@ -2,6 +2,11 @@
 
 ScriptSwift is a Next.js application that leverages AI to help sales professionals generate dynamic and adaptive cold call scripts. Users can input information about their business and target customer (either via a website URL for AI analysis or a text summary), and the application will generate an initial script turn. Subsequent turns are generated based on the prospect's selected responses, creating a conversational flow.
 
+![6000-firebase-studio-1747106431311 cluster-ikxjzjhlifcwuroomfkjrx437g cloudworkstations dev_](https://github.com/user-attachments/assets/10b76313-b98c-4066-aa52-9a49432cb58e)
+
+![6000-firebase-studio-1747106431311 cluster-ikxjzjhlifcwuroomfkjrx437g cloudworkstations dev_ (1)](https://github.com/user-attachments/assets/05a73f59-9b3f-4b34-beb1-46b0dd103680)
+
+
 ## Features
 
 -   **AI-Powered Script Generation:** Uses Genkit and Google AI models to create relevant and engaging sales scripts.
