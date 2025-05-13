@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Generates the next turn of a cold call script based on conversation history.
@@ -10,12 +9,16 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { ScriptTurn, ProspectResponseOption } from './generate-cold-call-script'; // Keep type import from original source
+import type { ScriptTurn as OriginalScriptTurnType } from './generate-cold-call-script'; // Keep type import from original source for reference if needed
 import { ScriptTurnSchema, ProspectResponseOptionSchema } from '@/ai/schemas/script-schemas'; // Import schemas from new location
 
 // Represents a completed turn in the script history
-const CompletedScriptTurnSchema = ScriptTurnSchema.extend({
-  chosenProspectResponse: ProspectResponseOptionSchema.describe("The specific response chosen by the prospect for this turn."),
+// This schema is for items within the scriptHistory array.
+// It explicitly defines how a completed turn should look.
+const CompletedScriptTurnSchema = z.object({
+  salespersonUtterance: ScriptTurnSchema.shape.salespersonUtterance, // Inherit from ScriptTurnSchema
+  prospectResponseOptions: z.array(ProspectResponseOptionSchema).max(0).describe("For a completed turn in history, this should be an empty array as a response has already been chosen and options are no longer relevant."), // Override: completed turns have no further options
+  chosenProspectResponse: ProspectResponseOptionSchema.describe("The specific response chosen by the prospect for this turn."), // Added for completed turns
 });
 type CompletedScriptTurn = z.infer<typeof CompletedScriptTurnSchema>;
 
@@ -32,7 +35,8 @@ const GenerateNextScriptTurnInputSchema = z.object({
 });
 
 export type GenerateNextScriptTurnInput = z.infer<typeof GenerateNextScriptTurnInputSchema>;
-export type GenerateNextScriptTurnOutput = ScriptTurn;
+// The output for the next turn is a standard ScriptTurn, which will have new prospectResponseOptions
+export type GenerateNextScriptTurnOutput = z.infer<typeof ScriptTurnSchema>; 
 
 export async function generateNextScriptTurn(input: GenerateNextScriptTurnInput): Promise<GenerateNextScriptTurnOutput> {
   return generateNextScriptTurnFlow(input);
@@ -41,7 +45,7 @@ export async function generateNextScriptTurn(input: GenerateNextScriptTurnInput)
 const generateNextScriptTurnPrompt = ai.definePrompt({
   name: 'generateNextScriptTurnPrompt',
   input: {schema: GenerateNextScriptTurnInputSchema},
-  output: {schema: ScriptTurnSchema},
+  output: {schema: ScriptTurnSchema}, // Output is a new ScriptTurn with options
   prompt: `You are an expert sales coach guiding {{{userName}}} from {{{businessName}}} through a cold call.
 They are selling: {{{productService}}}.
 Their goal for this call is: {{{salesGoals}}}.
@@ -67,6 +71,7 @@ Based on this, what should {{{userName}}} say next?
 - Directly reference the prospect's last response if it feels natural and constructive to do so.
 - Keep the overall call objective ({{{salesGoals}}}) in mind for every turn.
 - Aim for a natural, flowing conversation, not a rigid Q&A.
+- Each salesperson utterance should be very short, ideally 1-2 sentences, max 10-15 seconds to speak.
 
 Output Format Requirements:
 The output MUST be a JSON object conforming to the ScriptTurn schema.
@@ -81,7 +86,7 @@ const generateNextScriptTurnFlow = ai.defineFlow(
   {
     name: 'generateNextScriptTurnFlow',
     inputSchema: GenerateNextScriptTurnInputSchema,
-    outputSchema: ScriptTurnSchema,
+    outputSchema: ScriptTurnSchema, // Output is a regular ScriptTurn for the next step
   },
   async (input) => {
     const {output} = await generateNextScriptTurnPrompt(input);
@@ -91,3 +96,6 @@ const generateNextScriptTurnFlow = ai.defineFlow(
     return output;
   }
 );
+
+// Export type for ScriptTurn for other modules if they need the structure of a single turn (like the page)
+export type { OriginalScriptTurnType as ScriptTurn };
