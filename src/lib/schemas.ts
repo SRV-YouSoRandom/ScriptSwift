@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const BusinessInfoSchema = z.object({
+  userName: z.string().min(1, "Your name is required."),
   businessName: z.string().min(1, "Business name is required."),
   productService: z.string().min(1, "Product/Service description is required."),
   salesGoals: z.string().min(1, "Sales goals are required."),

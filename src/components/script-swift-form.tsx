@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import type { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { handleGenerateScriptAction } from "@/lib/actions";
-import { GenerateScriptFormSchema, type GenerateScriptInput } from "@/lib/schemas"; // Updated import
+import { GenerateScriptFormSchema, type GenerateScriptInput } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertTriangle } from "lucide-react";
@@ -32,6 +32,7 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
     resolver: zodResolver(GenerateScriptFormSchema),
     defaultValues: {
       businessInfo: {
+        userName: "",
         businessName: "",
         productService: "",
         salesGoals: "",
@@ -51,7 +52,6 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
     setError(null);
     onGenerationStart();
 
-    // Ensure URL is empty if type is text, and text is empty if type is URL
     const submissionValues: GenerateScriptInput = {
       ...values,
       customerInfo: {
@@ -70,10 +70,11 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
           title: "Script Generated!",
           description: "Your sales script is ready.",
         });
-        form.reset(); // Optionally reset form
+        // Do not reset form here, user might want to tweak and regenerate
+        // form.reset(); 
       } else {
         setError(result.error || "Failed to generate script.");
-        toast({ // Added toast for generation error
+        toast({
           title: "Generation Failed",
           description: result.error || "Could not generate script. Please check your inputs.",
           variant: "destructive",
@@ -104,6 +105,19 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <section className="space-y-4 p-4 border rounded-lg shadow-sm">
               <h3 className="text-lg font-semibold text-primary">Your Business</h3>
+              <FormField
+                control={form.control}
+                name="businessInfo.userName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Your Name (Salesperson)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Jane Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="businessInfo.businessName"
@@ -155,7 +169,6 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
                         value={field.value}
                         onValueChange={(value) => {
                             field.onChange(value as "url" | "text");
-                            // Clear the other field when switching types
                             if (value === "url") {
                                 form.setValue("customerInfo.text", "");
                                 form.clearErrors("customerInfo.text"); 
@@ -163,7 +176,7 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
                                 form.setValue("customerInfo.url", "");
                                 form.clearErrors("customerInfo.url");
                             }
-                            form.clearErrors("customerInfo.type"); // Clear general customerInfo error
+                            form.clearErrors("customerInfo.type"); 
                         }}
                         className="w-full"
                     >
@@ -194,7 +207,7 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
                             <FormItem>
                                 <FormLabel>Customer Summary</FormLabel>
                                 <FormControl>
-                                <Textarea placeholder="Describe your target customer, their business, or their needs." {...textField} disabled={customerInfoType !== "text"} />
+                                <Textarea placeholder="Describe your target customer, their business, or their needs. Include company name if known." {...textField} disabled={customerInfoType !== "text"} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -204,11 +217,9 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
                     </Tabs>
                 )}
               />
-              {/* Display general error for customerInfo.type (from refine) */}
               {form.formState.errors.customerInfo?.type?.message && (
                  <p className="text-sm font-medium text-destructive">{form.formState.errors.customerInfo.type.message}</p>
               )}
-               {/* Fallback for root customerInfo error if refine path doesn't catch it */}
               {form.formState.errors.customerInfo?.message && !form.formState.errors.customerInfo?.type?.message && (
                  <p className="text-sm font-medium text-destructive">{form.formState.errors.customerInfo.message}</p>
               )}

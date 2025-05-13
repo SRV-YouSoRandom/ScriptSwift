@@ -3,7 +3,7 @@
 import type { z } from "zod";
 import { analyzeCustomerWebsite } from "@/ai/flows/analyze-customer-website";
 import { generateColdCallScript } from "@/ai/flows/generate-cold-call-script";
-import type { GenerateScriptInput } from "@/lib/schemas"; // Import type from new schemas file
+import type { GenerateScriptInput } from "@/lib/schemas";
 
 export async function handleGenerateScriptAction(values: GenerateScriptInput) {
   try {
@@ -15,13 +15,15 @@ export async function handleGenerateScriptAction(values: GenerateScriptInput) {
     } else if (values.customerInfo.type === "text" && values.customerInfo.text) {
       customerContext = values.customerInfo.text;
     } else {
-      throw new Error("Invalid customer information provided.");
+      // This case should ideally be caught by Zod validation, but good to have a fallback.
+      throw new Error("Invalid customer information: Neither URL nor text summary provided.");
     }
 
-    const businessContext = `Business Name: ${values.businessInfo.businessName}\nProduct/Service: ${values.businessInfo.productService}\nSales Goals: ${values.businessInfo.salesGoals}`;
-
     const scriptResult = await generateColdCallScript({
-      businessInfo: businessContext,
+      userName: values.businessInfo.userName,
+      businessName: values.businessInfo.businessName,
+      productService: values.businessInfo.productService,
+      salesGoals: values.businessInfo.salesGoals,
       customerInfo: customerContext,
     });
 
