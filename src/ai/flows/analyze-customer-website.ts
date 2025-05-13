@@ -10,7 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import {extractWebsiteContent} from '@/services/web-scrape';
+import {extractWebsiteContent} from '../../services/web-scrape'; // Corrected import path
 
 const AnalyzeCustomerWebsiteInputSchema = z.object({
   url: z.string().url().describe('The URL of the customer website to analyze.'),
