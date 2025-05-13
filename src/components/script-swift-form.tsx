@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { z } from "zod";
+// import type { z } from "zod"; // Not needed if not using z.infer here
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+// import { Label } from "@/components/ui/label"; // Not directly used, FormLabel is used
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -16,10 +16,10 @@ import { GenerateScriptFormSchema, type GenerateScriptInput } from "@/lib/schema
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertTriangle } from "lucide-react";
-import type { GenerateColdCallScriptOutput } from "@/ai/flows/generate-cold-call-script";
+import type { ScriptTurn } from "@/ai/flows/generate-cold-call-script";
 
 interface ScriptSwiftFormProps {
-  onScriptGenerated: (script: GenerateColdCallScriptOutput) => void;
+  onScriptGenerated: (scriptTurn: ScriptTurn, inputs: GenerateScriptInput) => void;
   onGenerationStart: () => void;
   onGenerationEnd: () => void;
 }
@@ -65,11 +65,11 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
 
     try {
       const result = await handleGenerateScriptAction(submissionValues);
-      if (result.success && result.script) {
-        onScriptGenerated(result.script);
+      if (result.success && result.scriptTurn) {
+        onScriptGenerated(result.scriptTurn, submissionValues); // Pass submissionValues
         toast({
-          title: "Script Generated!",
-          description: "Your sales script is ready.",
+          title: "Script Started!",
+          description: "Your initial sales script turn is ready.",
         });
       } else {
         setError(result.error || "Failed to generate script.");
@@ -97,7 +97,7 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
     <Card className="w-full shadow-xl">
       <CardHeader>
         <CardTitle>Create Your Sales Script</CardTitle>
-        <CardDescription>Tell us about your business and customer to generate a tailored cold call script.</CardDescription>
+        <CardDescription>Tell us about your business and customer to generate the first part of your cold call script.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -169,13 +169,13 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
                         onValueChange={(value) => {
                             field.onChange(value as "url" | "text");
                             if (value === "url") {
-                                form.setValue("customerInfo.text", "");
+                                form.setValue("customerInfo.text", ""); // Clear text if URL is chosen
                                 form.clearErrors("customerInfo.text"); 
                             } else {
-                                form.setValue("customerInfo.url", "");
+                                form.setValue("customerInfo.url", ""); // Clear URL if text is chosen
                                 form.clearErrors("customerInfo.url");
                             }
-                            form.clearErrors("customerInfo.type"); 
+                            // form.clearErrors("customerInfo.type"); // May not be needed if refine handles it well
                         }}
                         className="w-full"
                     >
@@ -216,11 +216,12 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
                     </Tabs>
                 )}
               />
-              {form.formState.errors.customerInfo?.type?.message && (
-                 <p className="text-sm font-medium text-destructive">{form.formState.errors.customerInfo.type.message}</p>
-              )}
-              {form.formState.errors.customerInfo?.message && !form.formState.errors.customerInfo?.type?.message && (
+              {/* Display general customerInfo error if present (from .refine()) */}
+              {form.formState.errors.customerInfo?.message && !form.formState.errors.customerInfo?.url && !form.formState.errors.customerInfo?.text && (
                  <p className="text-sm font-medium text-destructive">{form.formState.errors.customerInfo.message}</p>
+              )}
+               {form.formState.errors.customerInfo?.type?.message && (
+                 <p className="text-sm font-medium text-destructive">{form.formState.errors.customerInfo.type.message}</p>
               )}
             </section>
             
@@ -239,7 +240,7 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
                   Generating Script...
                 </>
               ) : (
-                "Generate Script"
+                "Start Script"
               )}
             </Button>
           </form>

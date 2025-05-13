@@ -6,52 +6,52 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { ClipboardCopy, Download } from "lucide-react";
-import type { GenerateColdCallScriptOutput } from "@/ai/flows/generate-cold-call-script";
+import { ClipboardCopy, Download, MessageSquare, User, CornerDownRight, Loader2 } from "lucide-react";
+import type { ScriptTurn, ProspectResponseOption } from "@/ai/flows/generate-cold-call-script";
 
-interface ScriptDisplayProps {
-  script: GenerateColdCallScriptOutput;
-  onClear?: () => void;
+export interface DisplayableTurn extends Partial<ScriptTurn> {
+  salespersonUtterance: string;
+  prospectResponseOptions?: ProspectResponseOption[];
+  chosenProspectResponse?: ProspectResponseOption;
 }
 
-function formatScriptForDisplay(script: GenerateColdCallScriptOutput): string {
-  let formatted = `## Opening\n${script.opening}\n\n`;
-  formatted += `## Value Proposition\n${script.valueProposition}\n\n`;
-  formatted += `## Engagement Question\n${script.engagementQuestion}\n\n`;
-  formatted += `## Call to Action\n${script.callToAction}\n\n`;
+interface ScriptDisplayProps {
+  turns: DisplayableTurn[];
+  onClear?: () => void;
+  onProspectResponseSelected: (turnIndex: number, selectedResponse: ProspectResponseOption) => void;
+  isLoadingNextTurn: boolean;
+}
 
-  if (script.adaptivePhrases) {
-    formatted += `## Adaptive Phrases\n`;
-    formatted += `### If Prospect is Positive:\n${script.adaptivePhrases.positiveCueResponse}\n\n`;
-    formatted += `### If Prospect is Neutral/Busy:\n${script.adaptivePhrases.neutralOrBusyResponse}\n\n`;
-  }
-
-  if (script.objectionHandlingTips && script.objectionHandlingTips.length > 0) {
-    formatted += `## Objection Handling Tips\n`;
-    script.objectionHandlingTips.forEach(tip => {
-      formatted += `### Objection: ${tip.objection}\nResponse: ${tip.response}\n\n`;
-    });
-  }
+function formatConversationForText(turns: DisplayableTurn[]): string {
+  let formatted = "Sales Script Conversation:\n\n";
+  turns.forEach((turn, index) => {
+    formatted += `Salesperson (Turn ${index + 1}):\n${turn.salespersonUtterance}\n\n`;
+    if (turn.chosenProspectResponse) {
+      formatted += `Prospect Responded:\n${turn.chosenProspectResponse.responseText} (Type: ${turn.chosenProspectResponse.responseType})\n\n`;
+    } else if (index === turns.length - 1 && turn.prospectResponseOptions && turn.prospectResponseOptions.length > 0) {
+      formatted += `Waiting for prospect response (options were: ${turn.prospectResponseOptions.map(o => o.responseText).join(', ')})...\n\n`;
+    }
+  });
   return formatted.trim();
 }
 
 
-export const ScriptDisplay: FC<ScriptDisplayProps> = ({ script, onClear }) => {
+export const ScriptDisplay: FC<ScriptDisplayProps> = ({ turns, onClear, onProspectResponseSelected, isLoadingNextTurn }) => {
   const { toast } = useToast();
-  const [displayableScript, setDisplayableScript] = useState("");
+  const [conversationText, setConversationText] = useState("");
 
   useEffect(() => {
-    if (script) {
-      setDisplayableScript(formatScriptForDisplay(script));
+    if (turns) {
+      setConversationText(formatConversationForText(turns));
     }
-  }, [script]);
+  }, [turns]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(displayableScript)
+    navigator.clipboard.writeText(conversationText)
       .then(() => {
         toast({
           title: "Copied to clipboard!",
-          description: "The script has been copied successfully.",
+          description: "The conversation script has been copied.",
         });
       })
       .catch(err => {
@@ -65,52 +65,96 @@ export const ScriptDisplay: FC<ScriptDisplayProps> = ({ script, onClear }) => {
   };
 
   const handleDownload = () => {
-    const blob = new Blob([displayableScript], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([conversationText], { type: "text/plain;charset=utf-8" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = "sales_script.txt";
+    link.download = "sales_script_conversation.txt";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
     toast({
       title: "Download started",
-      description: "The script is being downloaded as sales_script.txt.",
+      description: "The script is being downloaded as sales_script_conversation.txt.",
     });
   };
   
   return (
     <Card className="w-full shadow-xl">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Generated Sales Script</CardTitle>
-        {/* Edit button removed for simplicity with structured script */}
+        <CardTitle>Your Sales Conversation</CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[300px] md:h-[400px] rounded-md border p-4 bg-secondary/30">
-          <pre className="whitespace-pre-wrap text-sm md:text-base leading-relaxed font-sans">
-            {displayableScript.split('\n').map((line, index) => {
-              if (line.startsWith('## ') && !line.startsWith('### ')) {
-                return <strong key={index} className="block mt-3 mb-1 text-lg text-primary">{line.substring(3)}</strong>;
-              }
-              if (line.startsWith('### ')) {
-                return <strong key={index} className="block mt-2 mb-0.5 text-md text-foreground/80">{line.substring(4)}</strong>;
-              }
-              return <span key={index} className="block">{line}</span>;
-            })}
-          </pre>
+        <ScrollArea className="h-[300px] md:h-[400px] rounded-md border p-4 bg-secondary/30 space-y-4">
+          {turns.map((turn, index) => (
+            <div key={index} className="space-y-2">
+              <div className="flex items-start gap-2">
+                <User className="h-5 w-5 text-primary flex-shrink-0 mt-1" />
+                <div className="bg-card p-3 rounded-lg shadow">
+                  <p className="font-semibold text-sm text-primary-foreground bg-primary px-2 py-0.5 rounded-full inline-block mb-1">Salesperson</p>
+                  <p className="whitespace-pre-wrap text-sm md:text-base leading-relaxed">
+                    {turn.salespersonUtterance}
+                  </p>
+                </div>
+              </div>
+
+              {turn.chosenProspectResponse && (
+                <div className="flex items-start gap-2 pl-8">
+                   <MessageSquare className="h-5 w-5 text-accent flex-shrink-0 mt-1" />
+                   <div className="bg-accent/10 p-3 rounded-lg shadow">
+                     <p className="font-semibold text-sm text-accent px-2 py-0.5 rounded-full inline-block mb-1">Prospect</p>
+                     <p className="whitespace-pre-wrap text-sm md:text-base italic">
+                        {turn.chosenProspectResponse.responseText}
+                     </p>
+                   </div>
+                </div>
+              )}
+
+              {index === turns.length - 1 && !turn.chosenProspectResponse && turn.prospectResponseOptions && turn.prospectResponseOptions.length > 0 && (
+                <div className="pl-8 mt-3 space-y-2">
+                  <p className="text-sm text-muted-foreground font-medium">How might the prospect respond?</p>
+                  <div className="flex flex-wrap gap-2">
+                    {turn.prospectResponseOptions.map((option, optionIndex) => (
+                      <Button
+                        key={optionIndex}
+                        variant={
+                          option.responseType === "positive" ? "default" : 
+                          option.responseType === "negative_objection" ? "destructive" : "secondary"
+                        }
+                        size="sm"
+                        onClick={() => onProspectResponseSelected(index, option)}
+                        disabled={isLoadingNextTurn}
+                        className="shadow-md"
+                      >
+                        {isLoadingNextTurn && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <CornerDownRight className="mr-1 h-4 w-4" />
+                        {option.responseText}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+               {index === turns.length - 1 && isLoadingNextTurn && (!turn.prospectResponseOptions || turn.prospectResponseOptions.length === 0) && (
+                 <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <p className="ml-2 text-muted-foreground">Generating next part of script...</p>
+                 </div>
+               )}
+            </div>
+          ))}
         </ScrollArea>
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row justify-end gap-2">
         {onClear && (
           <Button variant="outline" onClick={onClear} className="w-full sm:w-auto">
-            Clear & New
+            Clear & New Script
           </Button>
         )}
-        <Button onClick={handleCopy} className="w-full sm:w-auto">
-          <ClipboardCopy className="mr-2 h-4 w-4" /> Copy Script
+        <Button onClick={handleCopy} className="w-full sm:w-auto" disabled={turns.length === 0}>
+          <ClipboardCopy className="mr-2 h-4 w-4" /> Copy Conversation
         </Button>
-        <Button onClick={handleDownload} className="w-full sm:w-auto">
-          <Download className="mr-2 h-4 w-4" /> Download Script
+        <Button onClick={handleDownload} className="w-full sm:w-auto" disabled={turns.length === 0}>
+          <Download className="mr-2 h-4 w-4" /> Download Conversation
         </Button>
       </CardFooter>
     </Card>
