@@ -11,6 +11,15 @@ ScriptSwift is a Next.js application that leverages AI to help sales professiona
 -   **Copy & Download:** Easily copy the generated conversation or download it as a text file.
 -   **Built with Next.js & ShadCN UI:** Modern, responsive, and performant web application.
 
+## Screenshots
+
+**1. Input Form:** Where you provide details about your business and the customer.
+![ScriptSwift Input Form](https://storage.googleapis.com/idx-acm-dev-public-bucket/user_code_scriptswift_input_form.png)
+
+**2. Script Display:** Shows the generated script and allows interaction.
+![ScriptSwift Script Display](https://storage.googleapis.com/idx-acm-dev-public-bucket/user_code_scriptswift_script_display.png)
+
+
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
@@ -66,7 +75,7 @@ npm run genkit:watch
 yarn genkit:watch
 ```
 
-This command starts the Genkit development server and watches for changes in your AI flow files (located in `src/ai/flows/`). You should see output indicating that Genkit has started and your flows are available (e.g., `diagnosePlantFlow`, `generateColdCallScriptFlow`, etc.). By default, it runs on port 3400 and the Genkit Developer UI is available at `http://localhost:4000/`.
+This command starts the Genkit development server and watches for changes in your AI flow files (located in `src/ai/flows/`). You should see output indicating that Genkit has started and your flows are available. By default, it runs on port 3400 and the Genkit Developer UI is available at `http://localhost:4000/`.
 
 ### 5. Run the Next.js Development Server
 
@@ -83,25 +92,25 @@ This will typically start the application on `http://localhost:9002` (as configu
 ## How to Use ScriptSwift
 
 1.  **Navigate to the Application:** Open your browser and go to `http://localhost:9002` (or the port your Next.js server is running on).
-2.  **Fill in Business Information:**
+2.  **Fill in Business Information (See Screenshot 1):**
     *   **Your Name:** The name of the salesperson.
     *   **Business Name:** Your company's name.
     *   **Product/Service Description:** A clear description of what you're selling.
     *   **Sales Goals:** The objective of the cold call (e.g., schedule a demo, qualify lead).
-3.  **Provide Customer Information:**
+3.  **Provide Customer Information (See Screenshot 1):**
     You have two options:
     *   **Website URL:** Enter the URL of the customer's website. The AI will attempt to analyze it to gather context.
     *   **Text Summary:** Provide a manual summary of the customer, their business, needs, or any relevant information. If you know the customer's company name, try to include it, for example: "Company Name: XYZ Corp. They specialize in..."
 4.  **Start Script:** Click the "Start Script" button.
     *   The application will process your input. If you provided a URL, it will first analyze the website, then generate the initial turn of the sales script.
-5.  **Interact with the Script:**
+5.  **Interact with the Script (See Screenshot 2):**
     *   The first part of the script (salesperson's utterance) will be displayed.
     *   Below it, you'll see several buttons representing potential prospect responses (e.g., "Tell me more", "I'm busy").
     *   Click the button that best matches how you anticipate the prospect might respond.
 6.  **Continue the Conversation:**
     *   Based on your selection, the AI will generate the next part of the salesperson's script.
     *   This process continues, allowing you to build a multi-turn conversation.
-7.  **Manage the Script:**
+7.  **Manage the Script (See Screenshot 2):**
     *   **Clear & New Script:** If you want to start over, click this button. It will clear the current script and show the input form again.
     *   **Copy Conversation:** Copies the entire conversation history to your clipboard.
     *   **Download Conversation:** Downloads the conversation as a `.txt` file.
@@ -137,7 +146,7 @@ This will typically start the application on `http://localhost:9002` (as configu
 │   │   ├── schemas.ts       # Zod schemas for form validation
 │   │   └── utils.ts         # General utility functions (e.g., cn for Tailwind)
 │   └── services/            # External service integrations
-│       └── web-scrape.ts    # (Placeholder) Web scraping service
+│       └── web-scrape.ts    # Web scraping service
 ├── public/                  # Static assets
 ├── .env.example             # Example environment file
 ├── components.json          # ShadCN UI configuration
@@ -174,7 +183,7 @@ Ensure your Genkit flows are also deployed and accessible by your production Nex
 -   [TypeScript](https://www.typescriptlang.org/)
 -   [Tailwind CSS](https://tailwindcss.com/)
 -   [ShadCN UI](https://ui.shadcn.com/)
--   [Genkit](https://firebase.google.com/docs/genkit) (with Google AI plugin)
+-   [Genkit](https://firebase.google.com/docs/genkit) (with Google AI plugin, using `gemini-2.0-flash` model)
 -   [Zod](https://zod.dev/) (for schema validation)
 -   [React Hook Form](https://react-hook-form.com/)
 
@@ -184,4 +193,5 @@ Ensure your Genkit flows are also deployed and accessible by your production Nex
 -   **API Key Issues:** Double-check that your `GOOGLE_API_KEY` in the `.env` file is correct and has the necessary permissions.
 -   **Hydration Errors:** These can sometimes occur if server-rendered content doesn't match client-rendered content. The application attempts to mitigate these, but if you encounter persistent issues, check for browser extensions or dynamic client-side operations that might interfere.
 -   **AI Response Quality:** The quality of AI-generated content can vary. The prompts in `src/ai/flows/` are designed to guide the AI, but may require further tuning for specific needs. The model `gemini-2.0-flash` is used for speed and cost-effectiveness; other models might provide different results.
-```
+-   **Slow AI Response Times:** While `gemini-2.0-flash` is chosen for speed, complex prompts or network latency can still lead to delays. Ensure your Genkit setup is optimal.
+
