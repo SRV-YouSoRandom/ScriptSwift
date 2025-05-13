@@ -42,7 +42,7 @@ const generateInitialScriptTurnPrompt = ai.definePrompt({
   output: {schema: ScriptTurnSchema}, // Output is a single ScriptTurn
   prompt: `You are an expert sales scriptwriter, creating the **opening** of a cold call.
 Your task is to craft an **ultra-concise (5-7 seconds, 1-2 short sentences)** opening statement for {{{userName}}} from {{{businessName}}}.
-The primary goal of this opening is to **immediately capture attention and earn a few more seconds**. It MUST include a hook directly referencing a highly specific insight from customerInfo about {{#if customerCompanyName}}{{customerCompanyName}}{{else}}their company{{/if}}.
+The primary goal of this opening is to **immediately capture attention and earn a few more seconds**.
 
 Salesperson Details:
 - Name: {{{userName}}}
@@ -50,23 +50,33 @@ Salesperson Details:
 - Product/Service: {{{productService}}}
 - Call Objective: {{{salesGoals}}}
 
-Target Customer Information:
-- Customer Company Name (if available): {{#if customerCompanyName}}{{customerCompanyName}}{{else}}Not specified{{/if}}
-- Detailed Customer Insights: {{{customerInfo}}} (Analyze this carefully for a specific hook!)
+Target Customer Information (use this to find a compelling, specific hook):
+- Customer Company Name (if identified): {{#if customerCompanyName}}{{customerCompanyName}}{{else}}The prospect's company{{/if}}
+- Insights about their business/website/activities: {{{customerInfo}}}
+  (Note: This 'customerInfo' may contain "Not clearly specified" for some fields. Use any available positive details for the hook. If many details are "Not clearly specified", pivot to a more general hook based on their likely industry or a general benefit of your product/service.)
 
-Output Format Requirements:
-The output MUST be a JSON object conforming to the ScriptTurn schema.
-- \`salespersonUtterance\`: The opening statement. Make it sound natural, human, and engaging.
-    - Example structure: "Hi [Prospect Contact at {{#if customerCompanyName}}{{customerCompanyName}}{{else}}Company{{/if}}], this is {{{userName}}} from {{{businessName}}}. I saw [specific insight from customerInfo, e.g., 'your recent article on X' or 'that {{#if customerCompanyName}}{{customerCompanyName}}{{else}}you're{{/if}} focusing on Y'], and had a quick thought related to how we help with [brief connection to productService]."
-    - Be creative and ensure the hook is strong and specific.
-- \`prospectResponseOptions\`: An array of 2-4 plausible, distinct short responses the prospect might give to this opening.
-    - Each option should have \`responseText\` (e.g., "Okay, what is it?", "I'm busy right now.", "Not interested.")
-    - And \`responseType\` ("positive", "neutral", "negative_objection").
+Instructions for the Opening Statement:
+- It MUST be ultra-concise (1-2 short sentences, aiming for 5-7 seconds).
+- It must grab attention immediately.
+- Create a hook by referencing a *specific, positive, or noteworthy insight* from the 'Insights' section regarding {{#if customerCompanyName}}{{customerCompanyName}}{{else}}their company{{/if}}.
+- **Crucially, if \`customerInfo\` contains phrases like "Not clearly specified" or "Placeholder content" for key details (like products/services or value propositions), DO NOT repeat these negative phrases in your script.**
+- Instead, if specific positive insights are scarce from \`customerInfo\`:
+    1. Try to infer their industry from \`customerCompanyName\` or any fragment of \`customerInfo\`.
+    2. Craft a hook based on a general benefit of your \`{{{productService}}}\` that would appeal to companies in that inferred industry.
+    3. If industry is also unclear, make a very general but intriguing statement related to a common business challenge your \`{{{productService}}}\` addresses.
+- Your utterance should sound natural, human, and engaging. Avoid overly formal or robotic language.
 
-Example of a good specific hook from customerInfo like "XYZ Corp recently launched a new AI initiative":
-"Hi, this is {{{userName}}} from {{{businessName}}}. I noticed {{#if customerCompanyName}}{{customerCompanyName}}'s{{else}}your company's{{/if}} exciting new AI initiative, and it reminded me of how we help businesses quickly integrate [relevant aspect of {{{productService}}}] into such projects."
+Example structure for a specific hook:
+"Hi [Prospect at {{#if customerCompanyName}}{{customerCompanyName}}{{else}}the company{{/if}}], this is {{{userName}}} from {{{businessName}}}. I noticed {{#if customerCompanyName}}{{customerCompanyName}}'s{{else}}your company's{{/if}} [mention a *specific positive detail* found in customerInfo, e.g., 'recent work in X' or 'focus on Y'], and it sparked a quick idea related to how we help with [brief connection to {{{productService}}}] that I thought you'd find interesting."
 
-Tone: Confident, empathetic, respectful, and human. NOT robotic or overly formal.
+Example if specific insights are lacking (e.g., customerInfo is mostly "Not clearly specified"):
+"Hi [Prospect at {{#if customerCompanyName}}{{customerCompanyName}}{{else}}the company{{/if}}], this is {{{userName}}} from {{{businessName}}}. We're currently helping businesses like yours in the [their likely industry, or 'your sector'] to [achieve a key benefit related to {{{productService}}}, e.g., 'streamline their operations' or 'enhance customer engagement'], and I had a brief thought for {{#if customerCompanyName}}{{customerCompanyName}}{{else}}you{{/if}}."
+
+Output Format Requirements for ScriptTurn (JSON object):
+- \`salespersonUtterance\`: The crafted opening statement.
+- \`prospectResponseOptions\`: An array of 2-4 plausible, distinct short responses the prospect might give to this opening. Each option should have \`responseText\` (e.g., "Okay, what is it?", "I'm busy right now.", "Not interested.") and \`responseType\` ("positive", "neutral", "negative_objection").
+
+Tone: Confident, empathetic, respectful, and human.
 Ensure all text is plain text. No markdown.
 
 Generate the initial script turn:

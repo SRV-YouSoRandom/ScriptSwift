@@ -20,11 +20,20 @@ export type AnalyzeCustomerWebsiteInput = z.infer<
 >;
 
 const AnalyzeCustomerWebsiteOutputSchema = z.object({
-  summary: z.string().describe('A concise summary of the customer website, including company name, products/services, target audience, and key value propositions. This summary will be used to personalize a sales script.'),
+  companyName: z.string().optional().describe('The identified name of the customer company. Omit if not found or not clearly identifiable.'),
+  summary: z.string().describe('A concise summary of the customer website, including products/services, target audience, and key value propositions. This summary will be used to personalize a sales script.'),
 });
 export type AnalyzeCustomerWebsiteOutput = z.infer<
   typeof AnalyzeCustomerWebsiteOutputSchema
 >;
+
+// Schema for the data actually passed to the prompt function
+const AnalyzeCustomerWebsitePromptRuntimeInputSchema = z.object({
+  url: z.string().url().describe('The URL of the customer website that was analyzed.'),
+  websiteContent: z.string().describe('The raw text content extracted from the website.'),
+});
+type AnalyzeCustomerWebsitePromptRuntimeInput = z.infer<typeof AnalyzeCustomerWebsitePromptRuntimeInputSchema>;
+
 
 export async function analyzeCustomerWebsite(
   input: AnalyzeCustomerWebsiteInput
@@ -34,18 +43,22 @@ export async function analyzeCustomerWebsite(
 
 const analyzeCustomerWebsitePrompt = ai.definePrompt({
   name: 'analyzeCustomerWebsitePrompt',
-  input: {schema: AnalyzeCustomerWebsiteInputSchema}, // Input here is just URL, websiteContent is added in the flow
+  input: {schema: AnalyzeCustomerWebsitePromptRuntimeInputSchema}, 
   output: {schema: AnalyzeCustomerWebsiteOutputSchema},
   prompt: `You are an expert marketing analyst. Your task is to analyze website content and extract key information for sales script personalization.
 
-  From the provided website content, generate a concise summary covering these points:
-  1.  **Company Name:** Identify the primary name of the business or organization.
-  2.  **Core Products/Services:** What do they primarily offer?
-  3.  **Target Audience:** Who are their typical customers or users?
-  4.  **Key Value Propositions/Unique Selling Points:** What makes them stand out? What problems do they solve?
-  5.  **Recent News/Notable Mentions (Optional):** If anything stands out (e.g., new product launch, award, major event), briefly note it.
+  From the provided website content (under "Website content:" below), identify the company name and generate a concise summary.
+  
+  Output Requirements (JSON object adhering to the output schema):
+  1.  \`companyName\`: Extract the primary name of the business or organization. If not clearly identifiable, this field can be omitted or an empty string.
+  2.  \`summary\`: Generate a summary covering these points:
+      *   **Core Products/Services:** What do they primarily offer? (If not clear, state "Not clearly specified")
+      *   **Target Audience:** Who are their typical customers or users? (If not clear, state "Not clearly specified")
+      *   **Key Value Propositions/Unique Selling Points:** What makes them stand out? What problems do they solve? (If not clear, state "Not clearly specified")
+      *   **Recent News/Notable Mentions (Optional):** If anything stands out (e.g., new product launch, award, major event), briefly note it.
 
   The summary should be factual and directly derived from the content. This summary will be passed to another AI to generate a sales script, so clarity and relevance are crucial.
+  If some information for the summary is not available in the content, explicitly state "Not clearly specified" for that point rather than making assumptions. Do not include the company name in the summary field itself, as it's a separate field.
 
   Website content:
   {{{websiteContent}}}
@@ -55,17 +68,22 @@ const analyzeCustomerWebsitePrompt = ai.definePrompt({
 const analyzeCustomerWebsiteFlow = ai.defineFlow(
   {
     name: 'analyzeCustomerWebsiteFlow',
-    inputSchema: AnalyzeCustomerWebsiteInputSchema, // Flow input schema
+    inputSchema: AnalyzeCustomerWebsiteInputSchema, // Input to the flow is just the URL
     outputSchema: AnalyzeCustomerWebsiteOutputSchema,
   },
-  async input => {
-    const websiteContent = await extractWebsiteContent(input.url);
-    // The prompt input now requires 'websiteContent', which we provide here.
-    // The prompt's input schema definition is for type checking the variables available *within* the prompt template itself.
-    const {output} = await analyzeCustomerWebsitePrompt({
-      url: input.url, // Pass original URL if needed by prompt, though current prompt doesn't use it directly
-      websiteContent: websiteContent, 
-    });
-    return output!;
+  async (flowInput: AnalyzeCustomerWebsiteInput) : Promise<AnalyzeCustomerWebsiteOutput> => {
+    const websiteContent = await extractWebsiteContent(flowInput.url);
+    
+    // Prepare the input for the prompt, matching AnalyzeCustomerWebsitePromptRuntimeInputSchema
+    const promptInput: AnalyzeCustomerWebsitePromptRuntimeInput = {
+      url: flowInput.url,
+      websiteContent: websiteContent,
+    };
+    const {output} = await analyzeCustomerWebsitePrompt(promptInput);
+    
+    if (!output) {
+        throw new Error("AI model did not return expected output for website analysis.");
+    }
+    return output;
   }
 );

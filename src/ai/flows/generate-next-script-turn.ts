@@ -45,7 +45,10 @@ const generateNextScriptTurnPrompt = ai.definePrompt({
   prompt: `You are an expert sales coach guiding {{{userName}}} from {{{businessName}}} through a cold call.
 They are selling: {{{productService}}}.
 Their goal for this call is: {{{salesGoals}}}.
-They are speaking with a representative from {{#if customerCompanyName}}{{customerCompanyName}}{{else}}a company matching this description: {{{customerInfo}}}{{/if}}.
+
+Target Customer Context:
+- Customer Company Name (if identified): {{#if customerCompanyName}}{{customerCompanyName}}{{else}}the prospect's company{{/if}}
+- Relevant background on the prospect (use this for context; DO NOT quote directly if it contains "Not clearly specified", "Placeholder content" or similar unhelpful phrases. Focus on actionable insights if any.): {{{customerInfo}}}
 
 Conversation History:
 {{#each scriptHistory}}
@@ -57,15 +60,17 @@ The prospect just said: "{{lastProspectResponse.responseText}}" (Sentiment: {{la
 
 Based on this, what should {{{userName}}} say next?
 - The utterance should be concise, human-like, and conversational.
-- If the prospect's last response was 'negative_objection', try to acknowledge and gently pivot or ask a clarifying question.
-- If 'positive', build on the interest.
-- If 'neutral', try to engage further or qualify.
-- Directly reference the prospect's last response if natural.
-- Keep the overall call objective ({{{salesGoals}}}) in mind.
+- If the \`customerInfo\` primarily contains "Not clearly specified" or is unhelpful, rely more on the general sales goal, product benefits, and conversation flow to guide the response.
+- If the prospect's last response was 'negative_objection', try to acknowledge and gently pivot or ask a clarifying question. Avoid being pushy.
+- If 'positive', build on the interest. Progress towards the \`{{{salesGoals}}}\`.
+- If 'neutral', try to engage further, clarify their position, or qualify their potential interest.
+- Directly reference the prospect's last response if it feels natural and constructive to do so.
+- Keep the overall call objective ({{{salesGoals}}}) in mind for every turn.
+- Aim for a natural, flowing conversation, not a rigid Q&A.
 
 Output Format Requirements:
 The output MUST be a JSON object conforming to the ScriptTurn schema.
-- \`salespersonUtterance\`: What {{{userName}}} should say next.
+- \`salespersonUtterance\`: What {{{userName}}} should say next. Make it sound natural.
 - \`prospectResponseOptions\`: An array of 2-4 distinct, plausible short responses the prospect might give. Each with \`responseText\` and \`responseType\` ("positive", "neutral", "negative_objection").
 
 Generate the next script turn:

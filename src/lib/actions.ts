@@ -1,6 +1,7 @@
+
 "use server";
 
-import { analyzeCustomerWebsite } from "@/ai/flows/analyze-customer-website";
+import { analyzeCustomerWebsite, type AnalyzeCustomerWebsiteOutput } from "@/ai/flows/analyze-customer-website";
 import { generateColdCallScript, type ScriptTurn, type ProspectResponseOption } from "@/ai/flows/generate-cold-call-script";
 import { generateNextScriptTurn, type GenerateNextScriptTurnInput } from "@/ai/flows/generate-next-script-turn";
 import type { GenerateScriptInput } from "@/lib/schemas";
@@ -15,23 +16,27 @@ export async function handleGenerateScriptAction(values: GenerateScriptInput): P
     let customerCompanyName: string | undefined = undefined;
 
     if (values.customerInfo.type === "url" && values.customerInfo.url) {
-      const analysisResult = await analyzeCustomerWebsite({ url: values.customerInfo.url });
+      const analysisResult: AnalyzeCustomerWebsiteOutput = await analyzeCustomerWebsite({ url: values.customerInfo.url });
       customerContext = analysisResult.summary;
-      // Attempt to extract company name from summary if possible.
-      // A more robust solution would be for analyzeCustomerWebsite to return it explicitly.
-      const companyNameMatch = analysisResult.summary.match(/Company Name:\s*([^,\n]+)/i);
-      if (companyNameMatch && companyNameMatch[1]) {
-        customerCompanyName = companyNameMatch[1].trim();
-      }
-
+      customerCompanyName = analysisResult.companyName; // Directly use from the structured output
     } else if (values.customerInfo.type === "text" && values.customerInfo.text) {
       customerContext = values.customerInfo.text;
-      const companyMatch = values.customerInfo.text.match(/Company Name:\s*([^,\n]+)/i) || values.customerInfo.text.match(/Business:\s*([^,\n]+)/i);
+      // Try to extract company name from text if provided this way
+      const companyMatch = values.customerInfo.text.match(/(?:Company Name|Business Name|Company|Business):\s*([^,\n;]+)/i);
       if (companyMatch && companyMatch[1]) {
         customerCompanyName = companyMatch[1].trim();
+      } else {
+        // Attempt a more general match if no explicit "Company Name:" prefix
+        const lines = values.customerInfo.text.split('\n');
+        if (lines.length > 0) {
+            const firstLineCandidate = lines[0].trim();
+            // Heuristic: assume first line is company name if it's short, not a full sentence, and not clearly something else.
+            if (firstLineCandidate.length > 0 && firstLineCandidate.length < 70 && !firstLineCandidate.includes('.') && !firstLineCandidate.toLowerCase().startsWith('http') && !firstLineCandidate.toLowerCase().includes('services')) {
+                customerCompanyName = firstLineCandidate;
+            }
+        }
       }
     } else {
-      // This case should ideally be caught by form validation, but as a fallback:
       customerContext = "No specific customer details provided beyond general business info.";
     }
 
@@ -62,22 +67,24 @@ export async function handleGenerateNextTurnAction(
     let customerCompanyName: string | undefined = undefined;
 
      if (baseInputs.customerInfo.type === "url" && baseInputs.customerInfo.url) {
-      // For next turns, we might not need to re-scrape, but pass existing summary.
-      // If scriptHistory is empty, it implies this might be an error or first call after initial.
-      // Assuming customerContext was established initially.
-      // For simplicity, let's assume the initial analysis is sufficient context.
-      // If re-analysis or different context is needed per turn, this logic would expand.
-      const analysisResult = await analyzeCustomerWebsite({ url: baseInputs.customerInfo.url });
+      // Re-analyze or fetch stored analysis. For simplicity, let's re-analyze.
+      // In a more complex app, you might store the initial analysis result.
+      const analysisResult: AnalyzeCustomerWebsiteOutput = await analyzeCustomerWebsite({ url: baseInputs.customerInfo.url });
       customerContext = analysisResult.summary;
-      const companyNameMatch = analysisResult.summary.match(/Company Name:\s*([^,\n]+)/i);
-      if (companyNameMatch && companyNameMatch[1]) {
-        customerCompanyName = companyNameMatch[1].trim();
-      }
+      customerCompanyName = analysisResult.companyName;
     } else if (baseInputs.customerInfo.type === "text" && baseInputs.customerInfo.text) {
       customerContext = baseInputs.customerInfo.text;
-      const companyMatch = baseInputs.customerInfo.text.match(/Company Name:\s*([^,\n]+)/i) || baseInputs.customerInfo.text.match(/Business:\s*([^,\n]+)/i);
+      const companyMatch = baseInputs.customerInfo.text.match(/(?:Company Name|Business Name|Company|Business):\s*([^,\n;]+)/i);
       if (companyMatch && companyMatch[1]) {
         customerCompanyName = companyMatch[1].trim();
+      } else {
+        const lines = baseInputs.customerInfo.text.split('\n');
+        if (lines.length > 0) {
+            const firstLineCandidate = lines[0].trim();
+            if (firstLineCandidate.length > 0 && firstLineCandidate.length < 70 && !firstLineCandidate.includes('.') && !firstLineCandidate.toLowerCase().startsWith('http') && !firstLineCandidate.toLowerCase().includes('services')) {
+                customerCompanyName = firstLineCandidate;
+            }
+        }
       }
     } else {
        customerContext = "No specific customer details provided beyond general business info.";
