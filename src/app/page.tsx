@@ -10,68 +10,93 @@ import type { GenerateScriptInput } from "@/lib/schemas";
 import { handleGenerateNextTurnAction } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 
+// Define a type for the processed inputs that will be stored
+export interface ProcessedScriptInputs {
+  businessInfo: GenerateScriptInput['businessInfo'];
+  salesGoals: string; 
+  customerContext: string;
+  customerCompanyName?: string;
+  originalCustomerInputType: 'url' | 'text';
+  originalCustomerInputValue: string; 
+}
+
+
 export default function ScriptSwiftPage() {
   const [scriptTurns, setScriptTurns] = useState<DisplayableTurn[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
-  const [formInputs, setFormInputs] = useState<GenerateScriptInput | null>(null);
+  // Changed formInputs to processedScriptInputs to store the processed context
+  const [processedScriptInputs, setProcessedScriptInputs] = useState<ProcessedScriptInputs | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     setCurrentYear(new Date().getFullYear());
   }, []);
 
-  const handleInitialScriptGenerated = (initialTurn: ScriptTurn, inputs: GenerateScriptInput) => {
+  // Updated signature to accept processed context and company name
+  const handleInitialScriptGenerated = (
+    initialTurn: ScriptTurn, 
+    originalInputs: GenerateScriptInput,
+    processedContext: string,
+    processedCompanyName?: string
+  ) => {
     setScriptTurns([{
       salespersonUtterance: initialTurn.salespersonUtterance,
       prospectResponseOptions: initialTurn.prospectResponseOptions,
-      // chosenProspectResponse will be set when user clicks a button
     }]);
-    setFormInputs(inputs); // Save form inputs for subsequent calls
+    // Store the processed information along with original inputs
+    setProcessedScriptInputs({
+      businessInfo: originalInputs.businessInfo,
+      salesGoals: originalInputs.businessInfo.salesGoals,
+      customerContext: processedContext,
+      customerCompanyName: processedCompanyName,
+      originalCustomerInputType: originalInputs.customerInfo.type,
+      originalCustomerInputValue: originalInputs.customerInfo.type === 'url' ? originalInputs.customerInfo.url! : originalInputs.customerInfo.text!,
+    });
     setIsLoading(false);
   };
 
   const handleGenerationStart = () => {
     setIsLoading(true);
     setScriptTurns([]); 
-    setFormInputs(null);
+    setProcessedScriptInputs(null); // Clear processed inputs
   };
   
-  const handleGenerationEnd = () => { // This might be called after initial or next turn
-    // setIsLoading(false); //isLoading is managed more granularly now
+  const handleGenerationEnd = () => {
+    // setIsLoading(false); // isLoading is managed more granularly
   };
 
   const handleClearScript = () => {
     setScriptTurns([]);
-    setFormInputs(null);
+    setProcessedScriptInputs(null); // Clear processed inputs
   };
 
   const handleProspectResponseSelected = async (turnIndex: number, selectedResponse: ProspectResponseOption) => {
-    if (!formInputs || scriptTurns.length === 0) {
+    // Check against processedScriptInputs
+    if (!processedScriptInputs || scriptTurns.length === 0) {
       toast({ title: "Error", description: "Cannot proceed without initial script and form data.", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
 
-    // Update the current turn with the chosen response
     const updatedTurns = scriptTurns.map((turn, index) => 
-      index === turnIndex ? { ...turn, chosenProspectResponse: selectedResponse, prospectResponseOptions: [] } : turn // Clear options for past turn
+      index === turnIndex ? { ...turn, chosenProspectResponse: selectedResponse, prospectResponseOptions: [] } : turn
     );
     setScriptTurns(updatedTurns);
 
-    // Prepare history for the AI
     const historyForAI = updatedTurns
-      .filter(turn => turn.chosenProspectResponse) // Only include turns where prospect has responded
+      .filter(turn => turn.chosenProspectResponse) 
       .map(turn => ({
         salespersonUtterance: turn.salespersonUtterance,
-        prospectResponseOptions: turn.prospectResponseOptions || [], // Should be empty for history items if cleared above
-        chosenProspectResponse: turn.chosenProspectResponse!, // Non-null assertion as we filtered
+        prospectResponseOptions: [], // Per schema for completed turns
+        chosenProspectResponse: turn.chosenProspectResponse!, 
       }));
       
 
     try {
-      const result = await handleGenerateNextTurnAction(formInputs, historyForAI, selectedResponse);
+      // Pass processedScriptInputs to the action
+      const result = await handleGenerateNextTurnAction(processedScriptInputs, historyForAI, selectedResponse);
       if (result.success && result.nextScriptTurn) {
         setScriptTurns(prevTurns => [...prevTurns, {
             salespersonUtterance: result.nextScriptTurn.salespersonUtterance,
@@ -79,8 +104,6 @@ export default function ScriptSwiftPage() {
         }]);
       } else {
         toast({ title: "Next Turn Generation Failed", description: result.error || "Could not generate the next part of the script.", variant: "destructive" });
-        // Optionally revert the UI to allow re-trying or show an error message prominently
-        // For now, we leave the chosen response and user has to clear or try again.
       }
     } catch (e) {
       const errMessage = e instanceof Error ? e.message : "An unexpected error occurred.";
@@ -101,11 +124,12 @@ export default function ScriptSwiftPage() {
       </header>
 
       <main className="w-full max-w-3xl space-y-10">
-        {!formInputs && ( // Only show form if no script is active
+        {/* Show form if no processed inputs (meaning no active script) */}
+        {!processedScriptInputs && (
            <ScriptSwiftForm 
             onScriptGenerated={handleInitialScriptGenerated}
             onGenerationStart={handleGenerationStart}
-            onGenerationEnd={handleGenerationEnd} // May not be needed here if loading is granular
+            onGenerationEnd={handleGenerationEnd}
           />
         )}
        
@@ -117,7 +141,7 @@ export default function ScriptSwiftPage() {
               turns={scriptTurns} 
               onClear={handleClearScript}
               onProspectResponseSelected={handleProspectResponseSelected}
-              isLoadingNextTurn={isLoading} // Pass loading state for next turn
+              isLoadingNextTurn={isLoading} 
             />
           </>
         )}
@@ -134,3 +158,4 @@ export default function ScriptSwiftPage() {
     </div>
   );
 }
+

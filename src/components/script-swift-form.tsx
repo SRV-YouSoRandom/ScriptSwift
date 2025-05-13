@@ -3,11 +3,9 @@
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-// import type { z } from "zod"; // Not needed if not using z.infer here
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-// import { Label } from "@/components/ui/label"; // Not directly used, FormLabel is used
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -19,7 +17,13 @@ import { Loader2, AlertTriangle } from "lucide-react";
 import type { ScriptTurn } from "@/ai/flows/generate-cold-call-script";
 
 interface ScriptSwiftFormProps {
-  onScriptGenerated: (scriptTurn: ScriptTurn, inputs: GenerateScriptInput) => void;
+  // Updated signature to include processed context and company name
+  onScriptGenerated: (
+    scriptTurn: ScriptTurn, 
+    originalInputs: GenerateScriptInput,
+    customerContext: string,
+    customerCompanyName?: string
+  ) => void;
   onGenerationStart: () => void;
   onGenerationEnd: () => void;
 }
@@ -66,7 +70,8 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
     try {
       const result = await handleGenerateScriptAction(submissionValues);
       if (result.success && result.scriptTurn) {
-        onScriptGenerated(result.scriptTurn, submissionValues); // Pass submissionValues
+        // Pass the new fields to onScriptGenerated
+        onScriptGenerated(result.scriptTurn, submissionValues, result.customerContext, result.customerCompanyName);
         toast({
           title: "Script Started!",
           description: "Your initial sales script turn is ready.",
@@ -169,13 +174,12 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
                         onValueChange={(value) => {
                             field.onChange(value as "url" | "text");
                             if (value === "url") {
-                                form.setValue("customerInfo.text", ""); // Clear text if URL is chosen
+                                form.setValue("customerInfo.text", ""); 
                                 form.clearErrors("customerInfo.text"); 
                             } else {
-                                form.setValue("customerInfo.url", ""); // Clear URL if text is chosen
+                                form.setValue("customerInfo.url", ""); 
                                 form.clearErrors("customerInfo.url");
                             }
-                            // form.clearErrors("customerInfo.type"); // May not be needed if refine handles it well
                         }}
                         className="w-full"
                     >
@@ -216,7 +220,6 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
                     </Tabs>
                 )}
               />
-              {/* Display general customerInfo error if present (from .refine()) */}
               {form.formState.errors.customerInfo?.message && !form.formState.errors.customerInfo?.url && !form.formState.errors.customerInfo?.text && (
                  <p className="text-sm font-medium text-destructive">{form.formState.errors.customerInfo.message}</p>
               )}
@@ -249,3 +252,4 @@ export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenera
     </Card>
   );
 }
+
