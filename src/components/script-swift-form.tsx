@@ -1,0 +1,218 @@
+"use client";
+
+import { useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { handleGenerateScriptAction, GenerateScriptFormSchema, type GenerateScriptInput } from "@/lib/actions";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, AlertTriangle } from "lucide-react";
+
+interface ScriptSwiftFormProps {
+  onScriptGenerated: (script: string) => void;
+  onGenerationStart: () => void;
+  onGenerationEnd: () => void;
+}
+
+export function ScriptSwiftForm({ onScriptGenerated, onGenerationStart, onGenerationEnd }: ScriptSwiftFormProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const form = useForm<GenerateScriptInput>({
+    resolver: zodResolver(GenerateScriptFormSchema),
+    defaultValues: {
+      businessInfo: {
+        businessName: "",
+        productService: "",
+        salesGoals: "",
+      },
+      customerInfo: {
+        type: "url",
+        url: "",
+        text: "",
+      },
+    },
+  });
+
+  const customerInfoType = form.watch("customerInfo.type");
+
+  async function onSubmit(values: GenerateScriptInput) {
+    setIsLoading(true);
+    setError(null);
+    onGenerationStart();
+
+    // Ensure URL is empty if type is text, and text is empty if type is URL
+    const submissionValues = {
+      ...values,
+      customerInfo: {
+        ...values.customerInfo,
+        url: values.customerInfo.type === 'url' ? values.customerInfo.url : undefined,
+        text: values.customerInfo.type === 'text' ? values.customerInfo.text : undefined,
+      }
+    };
+
+    try {
+      const result = await handleGenerateScriptAction(submissionValues);
+      if (result.success && result.script) {
+        onScriptGenerated(result.script);
+        toast({
+          title: "Script Generated!",
+          description: "Your sales script is ready.",
+        });
+        form.reset(); // Optionally reset form
+      } else {
+        setError(result.error || "Failed to generate script.");
+      }
+    } catch (e) {
+      const errMessage = e instanceof Error ? e.message : "An unexpected error occurred.";
+      setError(errMessage);
+      toast({
+        title: "Error",
+        description: errMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      onGenerationEnd();
+    }
+  }
+
+  return (
+    <Card className="w-full shadow-xl">
+      <CardHeader>
+        <CardTitle>Create Your Sales Script</CardTitle>
+        <CardDescription>Tell us about your business and customer to generate a tailored cold call script.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <section className="space-y-4 p-4 border rounded-lg shadow-sm">
+              <h3 className="text-lg font-semibold text-primary">Your Business</h3>
+              <FormField
+                control={form.control}
+                name="businessInfo.businessName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Business Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Acme Corp" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="businessInfo.productService"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Product/Service Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Describe what you're selling, e.g., 'Cloud-based CRM solutions'" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="businessInfo.salesGoals"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sales Goals</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="What are you trying to achieve with this call? e.g., 'Schedule a demo, identify needs'" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </section>
+
+            <section className="space-y-4 p-4 border rounded-lg shadow-sm">
+              <h3 className="text-lg font-semibold text-primary">Your Customer</h3>
+              <Controller
+                control={form.control}
+                name="customerInfo.type"
+                render={({ field }) => (
+                    <Tabs
+                        value={field.value}
+                        onValueChange={(value) => field.onChange(value as "url" | "text")}
+                        className="w-full"
+                    >
+                        <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="url">Website URL</TabsTrigger>
+                        <TabsTrigger value="text">Text Summary</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="url" className="mt-4">
+                        <FormField
+                            control={form.control}
+                            name="customerInfo.url"
+                            render={({ field: urlField }) => (
+                            <FormItem>
+                                <FormLabel>Customer Website URL</FormLabel>
+                                <FormControl>
+                                <Input placeholder="https://customer-website.com" {...urlField} disabled={customerInfoType !== "url"} />
+                                </FormControl>
+                                {customerInfoType === "url" && <FormMessage />}
+                            </FormItem>
+                            )}
+                        />
+                        </TabsContent>
+                        <TabsContent value="text" className="mt-4">
+                        <FormField
+                            control={form.control}
+                            name="customerInfo.text"
+                            render={({ field: textField }) => (
+                            <FormItem>
+                                <FormLabel>Customer Summary</FormLabel>
+                                <FormControl>
+                                <Textarea placeholder="Describe your target customer, their business, or their needs." {...textField} disabled={customerInfoType !== "text"} />
+                                </FormControl>
+                                {customerInfoType === "text" && <FormMessage />}
+                            </FormItem>
+                            )}
+                        />
+                        </TabsContent>
+                    </Tabs>
+                )}
+              />
+              {/* Display general error for customerInfo */}
+              {form.formState.errors.customerInfo?.message && (
+                 <p className="text-sm font-medium text-destructive">{form.formState.errors.customerInfo.message}</p>
+              )}
+            </section>
+            
+            {error && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating Script...
+                </>
+              ) : (
+                "Generate Script"
+              )}
+            </Button>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
