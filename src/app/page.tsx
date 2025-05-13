@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Logo } from "@/components/icons/logo";
 import { ScriptSwiftForm } from "@/components/script-swift-form";
 import { ScriptDisplay } from "@/components/script-display";
@@ -9,6 +9,13 @@ import { Separator } from "@/components/ui/separator";
 export default function ScriptSwiftPage() {
   const [generatedScript, setGeneratedScript] = useState<string | null>(null);
   const [_isLoading, setIsLoading] = useState(false); // Renamed to avoid conflict if form has own loading
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Set current year on client-side after hydration
+    setCurrentYear(new Date().getFullYear());
+  }, []);
+
 
   const handleScriptGenerated = (script: string) => {
     setGeneratedScript(script);
@@ -53,7 +60,12 @@ export default function ScriptSwiftPage() {
       </main>
 
       <footer className="mt-16 text-center text-muted-foreground text-sm">
-        <p>&copy; {new Date().getFullYear()} ScriptSwift. All rights reserved.</p>
+        {currentYear !== null ? (
+          <p>&copy; {currentYear} ScriptSwift. All rights reserved.</p>
+        ) : (
+          // Fallback or placeholder during server render / before client-side effect
+          <p>&copy; ScriptSwift. All rights reserved.</p>
+        )}
         <p>Powered by AI magic.</p>
       </footer>
     </div>
