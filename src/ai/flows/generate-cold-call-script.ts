@@ -45,7 +45,7 @@ Your Business Details:
 - Objective for this call: {{{salesGoals}}}
 
 Target Customer Information:
-- Customer Company Name (if available): {{{customerCompanyName}}}
+- Customer Company Name (if available): {{#if customerCompanyName}}{{customerCompanyName}}{{else}}Not specified{{/if}}
 - Detailed Customer Insights: {{{customerInfo}}}
 (This information was gathered from their website or a provided summary. Analyze it carefully. Use the Customer Company Name if provided. Identify key aspects of their business, pain points, or recent activities to make the script highly relevant.)
 
@@ -53,27 +53,27 @@ Target Customer Information:
 SCRIPT GENERATION GUIDELINES:
 
 1.  **Opening (Approx. 10-15 seconds):**
-    *   Greet the prospect professionally and warmly. Use the {{{customerCompanyName}}} if available. Example: "Good morning/afternoon [Representative at {{{customerCompanyName}}}]". If no company name, "Good morning/afternoon,".
+    *   Greet the prospect professionally and warmly. Use {{#if customerCompanyName}}the representative at {{customerCompanyName}}{{else}}the prospect{{/if}}. Example: "Good morning/afternoon {{#if customerCompanyName}}representative at {{customerCompanyName}}{{else}}[Prospect Name/Generic Greeting]{{/if}},".
     *   Clearly introduce yourself: "this is {{{userName}}} calling from {{{businessName}}}."
-    *   Briefly state the reason for your call, immediately connecting to something relevant from the customerInfo or related to {{{customerCompanyName}}}. This shows you've done research.
-        *   Example if customerInfo mentions "expansion into new markets" for {{{customerCompanyName}}}: "I was reviewing {{{customerCompanyName}}}'s recent announcement about expanding into new markets, and it prompted me to reach out..."
-        *   Example if customerInfo mentions "struggling with X" for {{{customerCompanyName}}}: "I understand from some industry insights that companies like {{{customerCompanyName}}} are often looking for ways to improve [area related to X], which is why I'm calling..."
+    *   Briefly state the reason for your call, immediately connecting to something relevant from customerInfo {{#if customerCompanyName}}about {{customerCompanyName}}{{/if}}. This shows you've done research.
+        *   Example if customerInfo mentions "expansion into new markets" {{#if customerCompanyName}}for {{customerCompanyName}}{{/if}}: "I was reviewing {{#if customerCompanyName}}{{customerCompanyName}}'s{{else}}their company's{{/if}} recent announcement about expanding into new markets, and it prompted me to reach out..."
+        *   Example if customerInfo mentions "struggling with X" {{#if customerCompanyName}}for {{customerCompanyName}}{{/if}}: "I understand from some industry insights that companies like {{#if customerCompanyName}}{{customerCompanyName}}{{else}}yours{{/if}} are often looking for ways to improve [area related to X], which is why I'm calling..."
         *   If customerInfo is more general, tailor it: "I've been researching companies in the [customer's industry, if known from customerInfo] and {{{businessName}}} specializes in helping businesses like yours to..."
 
 2.  **Value Proposition (Approx. 20-30 seconds):**
-    *   Concise and benefit-driven. How does your {{{productService}}} specifically help {{{customerCompanyName}}} (or businesses like theirs, based on customerInfo)?
+    *   Concise and benefit-driven. How does your {{{productService}}} specifically help {{#if customerCompanyName}}{{customerCompanyName}}{{else}}businesses like theirs{{/if}} (based on customerInfo)?
     *   Focus on solving a potential problem or achieving a desirable outcome for the customer, based on customerInfo and general business challenges your product addresses.
-    *   Example: "We help businesses like {{{customerCompanyName}}} to [achieve specific benefit 1, e.g., 'streamline their X process by Y%'] and [achieve specific benefit 2, e.g., 'reduce costs associated with Z'], which seems particularly relevant given [mention something specific from customerInfo about {{{customerCompanyName}} if possible, otherwise a general industry trend]."
+    *   Example: "We help businesses like {{#if customerCompanyName}}{{customerCompanyName}}{{else}}yours{{/if}} to [achieve specific benefit 1, e.g., 'streamline their X process by Y%'] and [achieve specific benefit 2, e.g., 'reduce costs associated with Z'], which seems particularly relevant given [mention something specific from customerInfo about {{#if customerCompanyName}}{{customerCompanyName}}{{else}}their company{{/if}} if possible, otherwise a general industry trend]."
 
 3.  **Engagement Question (Leads to conversation):**
-    *   Ask an open-ended, insightful question that encourages them to talk about their current situation, challenges, or goals related to what you offer, specifically for {{{customerCompanyName}}}.
+    *   Ask an open-ended, insightful question that encourages them to talk about their current situation, challenges, or goals related to what you offer{{#if customerCompanyName}}, specifically for {{customerCompanyName}}{{/if}}.
     *   This should flow naturally from your value proposition.
-    *   Example: "How are you currently approaching [the challenge your product solves] at {{{customerCompanyName}}}?" or "What are your thoughts on optimizing [the area your product improves] in the coming months at {{{customerCompanyName}}}?"
+    *   Example: "How are you currently approaching [the challenge your product solves]{{#if customerCompanyName}} at {{customerCompanyName}}{{/if}}?" or "What are your thoughts on optimizing [the area your product improves]{{#if customerCompanyName}} in the coming months at {{customerCompanyName}}{{/if}}?"
 
 4.  **Call to Action (Clear and Low-Commitment):**
     *   Based on your {{{salesGoals}}}, propose a clear next step. Make it easy for them to say yes.
-    *   Example for "schedule a demo": "If this sounds like it could be beneficial for {{{customerCompanyName}}}, I'd be happy to schedule a brief 15-minute demo next week to show you exactly how it works. Would Tuesday or Thursday afternoon work for you?"
-    *   Example for "qualify lead": "To see if this is even a good fit for {{{customerCompanyName}}}, would you be open to a quick 5-10 minute chat to discuss your current [relevant process/system]?"
+    *   Example for "schedule a demo": "If this sounds like it could be beneficial for {{#if customerCompanyName}}{{customerCompanyName}}{{else}}your business{{/if}}, I'd be happy to schedule a brief 15-minute demo next week to show you exactly how it works. Would Tuesday or Thursday afternoon work for you?"
+    *   Example for "qualify lead": "To see if this is even a good fit for {{#if customerCompanyName}}{{customerCompanyName}}{{else}}your company{{/if}}, would you be open to a quick 5-10 minute chat to discuss your current [relevant process/system]?"
 
 5.  **Tone:**
     *   Confident, empathetic, and respectful of their time.
